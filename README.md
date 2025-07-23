@@ -1,2 +1,3 @@
 # ctp
-Extending support for class types as constant template parameters with reflection
+
+Extending support for class types as `c`onstant `t`emplate `p`arameters with reflection
