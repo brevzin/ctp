@@ -1,6 +1,8 @@
 #include <ctp/ctp.hh>
 // #include "ctp_single_header.hh"
 
+#include <iostream>
+
 constexpr int const& r1 = ctp::define_static_object(1);
 constexpr int const& r2 = ctp::define_static_object(1);
 static_assert(&r1 == &r2);
@@ -84,5 +86,24 @@ int main() {
         static_assert(std::same_as<decltype(v1), decltype(v2)>);
         static_assert(std::get<int>(v1.value) == 1);
         static_assert(std::get<std::string_view>(v3.value) == "hello");
+    }
+
+    {
+        X<"hello"> a;
+        X<"hello"> b;
+        X<"other"> c;
+
+        static_assert(std::same_as<decltype(a), decltype(b)>);
+        static_assert(!std::same_as<decltype(a), decltype(c)>);
+        static_assert(!std::same_as<decltype(b), decltype(c)>);
+
+        static_assert(a.value == "hello"sv);
+        static_assert(c.value == "other"sv);
+
+        constexpr char const* p = "hello";
+        X<p> d;
+        X<p+1> e;
+        static_assert(std::same_as<decltype(a), decltype(d)>);
+        static_assert(d.value + 1 == e.value);
     }
 }

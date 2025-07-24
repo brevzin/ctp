@@ -23,12 +23,15 @@ template <class T> requires (is_structural_type(^^T))
 struct Param<T> {
     T value;
 
-    consteval Param(T const& v) : value(v) { }
+    consteval Param(T const& v) : value(v) { ctp::normalize(value); }
     consteval operator T const&() const { return value; }
     consteval auto get() const -> T const& { return value; }
     consteval auto operator*() const -> T const& { return value; }
     consteval auto operator->() const -> T const* { return std::addressof(value); }
 };
+
+template <class T>
+Param(T) -> Param<T>;
 
 }
 

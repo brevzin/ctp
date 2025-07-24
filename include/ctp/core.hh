@@ -117,6 +117,18 @@ inline constexpr auto define_static_object =
         }
     };
 
+
+inline constexpr auto normalize =
+    []<class T>(T& v) -> void {
+        if constexpr (requires { std::is_string_literal(v); }) {
+            if (std::is_string_literal(v)) {
+                char const* root = std::string_literal_from(v);
+                char const* global = std::define_static_string(std::string_view(root));
+                v = global + (v - root);
+            }
+        }
+    };
+
 }
 
 #endif
