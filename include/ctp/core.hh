@@ -122,8 +122,7 @@ inline constexpr auto normalize =
     []<class T>([[maybe_unused]] T& v) -> void {
         #ifdef CTP_HAS_STRING_LITERAL
         if constexpr (requires { std::is_string_literal(v); }) {
-            if (std::is_string_literal(v)) {
-                char const* root = std::string_literal_from(v);
+            if (char const* root = std::string_literal_from(v)) {
                 char const* global = std::define_static_string(std::string_view(root));
                 v = global + (v - root);
             }
