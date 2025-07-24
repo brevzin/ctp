@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import argparse
 import os.path
 import re
 
@@ -28,10 +27,5 @@ class Generator(object):
                 print(line)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--include-path", required=True)
-    parser.add_argument("--src", required=True)
-    args = parser.parse_args()
-
-    generator = Generator(args.include_path)
-    generator.run(os.path.abspath(args.src))
+    generator = Generator("include")
+    generator.run(os.path.abspath("include/ctp/ctp.hh"))

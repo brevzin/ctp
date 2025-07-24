@@ -120,6 +120,20 @@ inline constexpr auto define_static_object =
         }
     };
 
+
+inline constexpr auto normalize =
+    []<class T>([[maybe_unused]] T& v) -> void {
+        #ifdef CTP_HAS_STRING_LITERAL
+        if constexpr (requires { std::is_string_literal(v); }) {
+            if (std::is_string_literal(v)) {
+                char const* root = std::string_literal_from(v);
+                char const* global = std::define_static_string(std::string_view(root));
+                v = global + (v - root);
+            }
+        }
+        #endif
+    };
+
 }
 
 #endif
@@ -129,6 +143,12 @@ inline constexpr auto define_static_object =
 
 namespace ctp {
 
+// For a lot of types, the easiest way to do serialization is just to push a
+// bunch of reflections and then get them all back out as function parameters.
+// This API is provided as a convenience, and is used by providing both:
+//
+//      auto Reflect<T>::serialize(Serializer&, T const&) -> void;
+//      auto Reflect<T>::deserialize(std::meta::info...) -> target_type;
 class Serializer {
     std::vector<std::meta::info> parts;
 public:
@@ -209,12 +229,15 @@ template <class T> requires (is_structural_type(^^T))
 struct Param<T> {
     T value;
 
-    consteval Param(T const& v) : value(v) { }
+    consteval Param(T const& v) : value(v) { ctp::normalize(value); }
     consteval operator T const&() const { return value; }
     consteval auto get() const -> T const& { return value; }
     consteval auto operator*() const -> T const& { return value; }
     consteval auto operator->() const -> T const* { return std::addressof(value); }
 };
+
+template <class T>
+Param(T) -> Param<T>;
 
 }
 
