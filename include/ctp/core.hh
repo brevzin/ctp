@@ -119,7 +119,8 @@ inline constexpr auto define_static_object =
 
 
 inline constexpr auto normalize =
-    []<class T>(T& v) -> void {
+    []<class T>([[maybe_unused]] T& v) -> void {
+        #ifdef CTP_HAS_STRING_LITERAL
         if constexpr (requires { std::is_string_literal(v); }) {
             if (std::is_string_literal(v)) {
                 char const* root = std::string_literal_from(v);
@@ -127,6 +128,7 @@ inline constexpr auto normalize =
                 v = global + (v - root);
             }
         }
+        #endif
     };
 
 }
