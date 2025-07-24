@@ -5,6 +5,12 @@
 
 namespace ctp {
 
+// For a lot of types, the easiest way to do serialization is just to push a
+// bunch of reflections and then get them all back out as function parameters.
+// This API is provided as a convenience, and is used by providing both:
+//
+//      auto Reflect<T>::serialize(Serializer&, T const&) -> void;
+//      auto Reflect<T>::deserialize(std::meta::info...) -> target_type;
 class Serializer {
     std::vector<std::meta::info> parts;
 public:
