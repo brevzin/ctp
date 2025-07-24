@@ -9,18 +9,30 @@
 
 namespace ctp {
     // The customization point to opt-in to having your type be usable as a
-    // ctp::Param. Reflect<T> needs to provide three things:
+    // ctp::Param. Reflect<T> can take one of two forms.
+    //
+    // Either:
     //
     //  struct {
-    //      using target = ????;
+    //      using target_type = ????;
     //      static consteval auto serialize(Serializer&, T const&) -> void;
-    //      static consteval auto deserialize(std::meta::info...) -> target;
+    //      static consteval auto deserialize(std::meta::info...) -> target_type;
     //  };
     //
-    // 1. serialize() can push any number of std::meta::info's into the serializer.
-    // 2. deserializer() will be invoked with the std::meta::info's that were
+    // 1. The target_type need not be C++20-structural itself, but cannot allocate.
+    // 2. serialize() can push any number of std::meta::info's into the serializer.
+    // 3. deserializer() will be invoked with the std::meta::info's that were
     //    pushed.
-    // 3. The target type need not be C++20-structural itself, but cannot allocate.
+    //
+    // Or:
+    //
+    //  struct {
+    //      using target_type = ????;
+    //      static consteval auto serialize(T const&) -> std::meta::info;
+    //  };
+    //
+    // Where serialize() has to return a reflection of an object of type target-Type.
+
     template <class T>
     struct Reflect;
 
@@ -32,10 +44,7 @@ namespace ctp {
     // The target type for a given T. For structural types, the target is always
     // T in order to be consistent with regular C++20 template parameters.
     template <class T>
-    using target = [: []{
-        auto t = decay(^^T);
-        return is_structural_type(t) ? t : substitute(^^impl::custom_target, {t});
-    }() :];
+    using target = [: is_structural_type(^^T) ? ^^T : substitute(^^impl::custom_target, {^^T}) :];
 
     // For those cases where references need to be preserved,
     // target_or_ref<T&> is T& but target_or_ref<T> is target<T>
@@ -114,9 +123,13 @@ namespace ctp {
             }
         } else {
             // For non-structural types, customize via Reflect<T>::serialize
-            auto s = Serializer(^^T);
-            Reflect<T>::serialize(s, v);
-            return s.finalize();
+            if constexpr (requires { Reflect<T>::serialize(v); }) {
+                return Reflect<T>::serialize(v);
+            } else {
+                auto s = Serializer(^^T);
+                Reflect<T>::serialize(s, v);
+                return s.finalize();
+            }
         }
     };
 
@@ -218,31 +231,24 @@ namespace ctp {
     struct Reflect<std::variant<Ts...>> {
         using target_type = std::variant<target<Ts>...>;
 
-        static consteval auto serialize(Serializer& s, std::variant<Ts...> const& v) -> void {
-            s.push_constant(v.index());
+        template <size_t I, std::meta::info R>
+        static constexpr auto the_object = target_type(std::in_place_index<I>, [:R:]);
+
+        static consteval auto serialize(std::variant<Ts...> const& v) -> std::meta::info {
             // visit should work, but can't because of LWG4197
-            // v.visit([&](auto const& e){ s.push_constant(e); });
             template for (constexpr size_t I : std::views::iota(0zu, sizeof...(Ts))) {
                 if (I == v.index()) {
-                    s.push_constant(std::get<I>(v));
-                    return;
+                    return substitute(
+                        ^^the_object,
+                        {
+                            reflect_constant(I),
+                            reflect_constant(reflect_constant(std::get<I>(v)))
+                        }
+                    );
                 }
             }
-        }
 
-        template <size_t I>
-        static consteval auto deserialize_impl(std::meta::info r) -> target_type {
-            using T = Ts...[I];
-            return target_type(std::in_place_index<I>,
-                            extract<target<T> const&>(r));
-        }
-
-        static consteval auto deserialize(std::meta::info idx, std::meta::info r) -> target_type {
-            auto refl_fn = substitute(^^deserialize_impl, {idx});
-            // this is clearly a clang bug, since deserialize_impl cannot have
-            // pointer-to-member type, it's a static member function template...
-            auto fn = extract<auto(Reflect::*)(std::meta::info) -> target_type>(refl_fn);
-            return (Reflect().*fn)(r);
+            std::unreachable();
         }
     };
 }
