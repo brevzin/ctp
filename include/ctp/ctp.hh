@@ -57,10 +57,6 @@ namespace ctp {
         template <class T, std::meta::info... Is>
         inline constexpr target<T> the_object = Reflect<T>::deserialize(Is...);
 
-        // This is the simpler (private) object that just exists for reflect_constant on scalars
-        template <auto V>
-        inline constexpr auto simple_object = V;
-
         // This is the singular (private) object that will be used for reflect_constant_array
         template <class T, std::meta::info... Is>
         inline constexpr target<T> the_array[] = {[:Is:]...};
@@ -108,19 +104,24 @@ namespace ctp {
         }
     };
 
-    // Extension of std::meta::reflect_constant. Returns a reflection representing
-    // the object that is equivalent to the provided value. For non-structural
-    // class types, this is customized via Reflect<T>
+    // extract<T>(r) works for values and objects (but copies) while
+    // extract<T const&>(r) works only for objects.
+    // This ensures that we do the efficient thing.
+    template <class T>
+    inline constexpr auto extract_maybe_ref = [](std::meta::info r) -> decltype(auto) {
+        if constexpr (is_class_type(^^T)) {
+            return extract<T const&>(r);
+        } else {
+            return extract<T>(r);
+        }
+    };
+
+    // Extension of std::meta::reflect_constant that is customizable via Reflect<T>.
+    // For scalar types, returns a reflection representing a value.
+    // For class types, returns a reflection representing an object.
     inline constexpr auto reflect_constant = []<class T>(T const& v){
         if constexpr (is_structural_type(^^T)) {
-            if constexpr (is_class_type(^^T)) {
-                // For class types, std::meta::reflect_constant does what we want
-                return std::meta::reflect_constant(v);
-            } else {
-                // For scalar types, it gives a value though. So we need to do more
-                // work to actually ensure an object
-                return object_of(substitute(^^impl::simple_object, {std::meta::reflect_constant(v)}));
-            }
+            return std::meta::reflect_constant(v);
         } else {
             // For non-structural types, customize via Reflect<T>::serialize
             if constexpr (requires { Reflect<T>::serialize(v); }) {
@@ -147,8 +148,13 @@ namespace ctp {
     inline constexpr auto define_static_object =
         []<class T>(T const& v) -> target<T> const& {
             // ctp::reflect_constant gives us a reflection representing an object
-            // of type target<T>, for all types T. so here we just extract
-            return extract<target<T> const&>(reflect_constant(v));
+            // UNLESS T is a scalar type, in which case we have to do something else
+            if constexpr (is_class_type(^^T)) {
+                return extract<target<T> const&>(reflect_constant(v));
+            } else {
+                // should be std::define_static_object but not implemented in clang
+                return std::define_static_array(std::span(std::addressof(v), 1))[0];
+            }
         };
 
     template <class T>
@@ -168,6 +174,17 @@ namespace ctp {
         consteval auto get() const -> U const& { return value; }
         consteval auto operator*() const -> U const& { return value; }
         consteval auto operator->() const -> U const* { return std::addressof(value); }
+    };
+
+    template <class T> requires (is_structural_type(^^T))
+    struct Param<T> {
+        T value;
+
+        consteval Param(T const& v) : value(v) { }
+        consteval operator T const&() const { return value; }
+        consteval auto get() const -> T const& { return value; }
+        consteval auto operator*() const -> T const& { return value; }
+        consteval auto operator->() const -> T const* { return std::addressof(value); }
     };
 }
 
@@ -210,7 +227,9 @@ namespace ctp {
         }
 
         static consteval auto deserialize() -> target_type { return {}; }
-        static consteval auto deserialize(std::meta::info r) -> target_type { return extract<target<T> const&>(r); }
+        static consteval auto deserialize(std::meta::info r) -> target_type {
+            return extract_maybe_ref<target<T>>(r);
+        }
     };
 
     template <class... Ts>
@@ -223,7 +242,7 @@ namespace ctp {
         }
 
         static consteval auto deserialize(auto... rs) -> target_type {
-            return target_type(extract<target_or_ref<Ts> const&>(rs)...);
+            return target_type(extract_maybe_ref<target_or_ref<Ts>>(rs)...);
         }
     };
 

@@ -1,15 +1,8 @@
 #include <ctp/ctp.hh>
 
-constexpr auto r1 = ctp::reflect_constant(42);
-constexpr auto r2 = ctp::reflect_constant(42);
-static_assert(is_object(r1));
-static_assert(is_object(r2));
-static_assert(r1 == r2);
-
-constexpr auto const& r3 = ctp::define_static_object(42);
-constexpr auto const& r4 = ctp::define_static_object(42);
-static_assert(&r3 == &r4);
-static_assert(&r3 == &[:r1:]);
+constexpr int const& r1 = ctp::define_static_object(1);
+constexpr int const& r2 = ctp::define_static_object(1);
+static_assert(&r1 == &r2);
 
 template <ctp::Param V>
 struct X {
@@ -18,6 +11,18 @@ struct X {
 
 int main() {
     using namespace std::literals;
+
+    {
+        X<42> a;
+        X<42> b;
+        X<17> c;
+        static_assert(std::same_as<decltype(a), decltype(b)>);
+        static_assert(!std::same_as<decltype(a), decltype(c)>);
+        static_assert(!std::same_as<decltype(b), decltype(c)>);
+        static_assert(a.value == 42);
+        static_assert(c.value == 17);
+    }
+
     {
         X<"hello"s> a;
         X<"hello"s> b;
