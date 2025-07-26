@@ -105,4 +105,17 @@ int main() {
         static_assert(std::same_as<decltype(a), decltype(d)>);
         static_assert(d.value + 1 == e.value);
     }
+
+    {
+        X<"hello"sv> a;
+        X<"hello"sv> b;
+        static constexpr char msg[] = "hello";
+        X<std::string_view(msg)> c;
+
+        static_assert(std::same_as<decltype(a), decltype(b)>);
+        static_assert(!std::same_as<decltype(a), decltype(c)>);
+
+        static_assert(a.value == "hello"sv);
+        static_assert(c.value == "hello"sv);
+    }
 }

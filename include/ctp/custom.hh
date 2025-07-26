@@ -41,9 +41,9 @@ namespace ctp {
             }
         }
 
-        static consteval auto deserialize() -> target_type { return {}; }
-        static consteval auto deserialize(std::meta::info r) -> target_type {
-            return extract_maybe_ref<target<T>>(r);
+        static consteval auto deserialize_constants() -> target_type { return {}; }
+        static consteval auto deserialize_constants(target_or_ref<T> const& v) -> target_type {
+            return v;
         }
     };
 
@@ -56,8 +56,8 @@ namespace ctp {
             (s.push_constant_or_object(^^decltype(elems), elems), ...);
         }
 
-        static consteval auto deserialize(auto... rs) -> target_type {
-            return target_type(extract_maybe_ref<target_or_ref<Ts>>(rs)...);
+        static consteval auto deserialize_constants(target_or_ref<Ts> const&... vs) -> target_type {
+            return target_type(vs...);
         }
     };
 
@@ -65,24 +65,34 @@ namespace ctp {
     struct Reflect<std::variant<Ts...>> {
         using target_type = std::variant<target<Ts>...>;
 
-        template <size_t I, std::meta::info R>
-        static constexpr auto the_object = target_type(std::in_place_index<I>, [:R:]);
-
-        static consteval auto serialize(std::variant<Ts...> const& v) -> std::meta::info {
+        static consteval auto serialize(Serializer& s, std::variant<Ts...> const& v) -> void {
+            s.push_constant(v.index());
             // visit should work, but can't because of LWG4197
             template for (constexpr size_t I : std::views::iota(0zu, sizeof...(Ts))) {
                 if (I == v.index()) {
-                    return substitute(
-                        ^^the_object,
-                        {
-                            reflect_constant(I),
-                            reflect_constant(reflect_constant(std::get<I>(v)))
-                        }
-                    );
+                    s.push_constant(std::get<I>(v));
+                    return;
                 }
             }
+        }
 
-            std::unreachable();
+        template <std::meta::info I, std::meta::info R>
+        static consteval auto deserialize() -> target_type {
+            return target_type(std::in_place_index<([:I:])>, [:R:]);
+        }
+    };
+
+    template <>
+    struct Reflect<std::string_view> {
+        using target_type = std::string_view;
+
+        static consteval auto serialize(Serializer& s, std::string_view sv) -> void {
+            s.push_constant(sv.data());
+            s.push_constant(sv.size());
+        }
+
+        static consteval auto deserialize_constants(char const* data, size_t size) -> std::string_view {
+            return std::string_view(data, size);
         }
     };
 }
