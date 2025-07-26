@@ -118,4 +118,14 @@ int main() {
         static_assert(a.value == "hello"sv);
         static_assert(c.value == "hello"sv);
     }
+
+    {
+        static int i = 0;
+        static int j = 0;
+        X<std::ref(i)> a;
+        X<std::ref(j)> b;
+        static_assert(!std::same_as<decltype(a), decltype(b)>);
+        static_assert(&a.value.get() == &i);
+        static_assert(&b.value.get() == &j);
+    }
 }

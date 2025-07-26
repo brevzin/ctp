@@ -82,6 +82,19 @@ namespace ctp {
         }
     };
 
+    template <class T>
+    struct Reflect<std::reference_wrapper<T>> {
+        using target_type = std::reference_wrapper<T>;
+
+        static consteval auto serialize(Serializer& s, std::reference_wrapper<T> r) -> void {
+            s.push_object(r.get());
+        }
+
+        static consteval auto deserialize_constants(T& r) -> target_type {
+            return r;
+        }
+    };
+
     template <>
     struct Reflect<std::string_view> {
         using target_type = std::string_view;
