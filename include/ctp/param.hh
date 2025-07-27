@@ -9,18 +9,19 @@ namespace ctp {
 // template parameter of type T(~ish).
 template <class T>
 struct Param {
-    using U = target<T>;
-    U const& value;
+    using type = target<T>;
+    type const& value;
 
     consteval Param(T const& v) : value(define_static_object(v)) { }
-    consteval operator U const&() const { return value; }
-    consteval auto get() const -> U const& { return value; }
-    consteval auto operator*() const -> U const& { return value; }
-    consteval auto operator->() const -> U const* { return std::addressof(value); }
+    consteval operator type const&() const { return value; }
+    consteval auto get() const -> type const& { return value; }
+    consteval auto operator*() const -> type const& { return value; }
+    consteval auto operator->() const -> type const* { return std::addressof(value); }
 };
 
 template <class T> requires (is_structural_type(^^T))
 struct Param<T> {
+    using type = T;
     T value;
 
     consteval Param(T const& v) : value(v) { ctp::normalize(value); }
