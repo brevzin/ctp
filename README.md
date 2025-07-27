@@ -50,4 +50,4 @@ If you want to add support for your own (non-C++20 structural) type, you can do 
     static consteval auto deserialize_constants(T1 t1, T2 t2, ...) -> target_type;
     ```
 
-    In the library, `variant` uses the first form, `vector` and `string` use the second, and `optional`, `tuple`, `reference_wrapper`, and `string_view` use the third.
+    In the library, `variant` uses the first form, `vector` and `string` use the second, and `optional`, `tuple`, `reference_wrapper`, `span`, and `string_view` use the third.

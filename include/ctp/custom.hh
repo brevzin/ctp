@@ -108,6 +108,20 @@ namespace ctp {
             return std::string_view(data, size);
         }
     };
+
+    template <class T, size_t N>
+    struct Reflect<std::span<T, N>> {
+        using target_type = std::span<T, N>;
+
+        static consteval auto serialize(Serializer& s, std::span<T, N> sp) -> void {
+            s.push_constant(sp.data());
+            s.push_constant(sp.size());
+        }
+
+        static consteval auto deserialize_constants(T const* data, size_t size) -> target_type {
+            return target_type(data, size);
+        }
+    };
 }
 
 #endif

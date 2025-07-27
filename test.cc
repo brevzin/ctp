@@ -128,4 +128,12 @@ int main() {
         static_assert(&a.value.get() == &i);
         static_assert(&b.value.get() == &j);
     }
+
+    {
+        static constexpr int arr[5] = {};
+        X<std::span(arr)> a;
+        X<std::span<int const, 5>(arr)> b;
+        static_assert(a.value.data() == arr);
+        static_assert(b.value.data() == arr);
+    }
 }
