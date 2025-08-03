@@ -1,3 +1,4 @@
+#define CTP_META_IS_STRUCTURAL
 #define CTP_HAS_STRING_LITERAL
 #include <ctp/ctp.hh>
 // #include "ctp_single_header.hh"
