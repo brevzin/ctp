@@ -53,7 +53,7 @@ namespace ctp {
 
         static consteval auto serialize(Serializer& s, std::tuple<Ts...> const& t) -> void {
             auto& [...elems] = t;
-            (s.push_constant_or_object(^^decltype(elems), elems), ...);
+            (s.push_constant_or_object(^^Ts, elems), ...);
         }
 
         static consteval auto deserialize_constants(target_or_ref<Ts> const&... vs) -> target_type {
