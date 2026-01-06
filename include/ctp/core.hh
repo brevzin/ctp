@@ -4,8 +4,6 @@
 #include <meta>
 #include <ranges>
 
-#include <ctp/meta.hh>
-
 namespace ctp {
 
 // The customization point to opt-in to having your type be usable as a
